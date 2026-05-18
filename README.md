@@ -2,6 +2,8 @@
 
 XGBoost models predicting temperature, precipitation, and wind speed 24 hours ahead for Krasnodar, Russia, using the [Open-Meteo API](https://open-meteo.com/) (no API key required).
 
+<img src="media/screen1.jpg" alt="Telegram daily forecast" width="360"/>
+
 ## Quickstart
 
 ```bash
