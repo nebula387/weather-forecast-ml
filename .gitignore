@@ -1,0 +1,25 @@
+# secrets
+.env
+
+# data — too large for git, regenerated on VPS via download_history.py
+data/raw/
+data/processed/
+data/weather.db
+
+# trained models — regenerated on VPS via train.py
+models/*.pkl
+models/metadata.json
+
+# python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# logs
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
