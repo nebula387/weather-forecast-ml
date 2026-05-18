@@ -17,7 +17,8 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -e
-            cd /opt/weather-forecast-ml
+            APP_DIR="$HOME/weather-forecast-ml"
+            cd "$APP_DIR"
 
             echo "=== git pull ==="
             git pull origin main
