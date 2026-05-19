@@ -6,10 +6,6 @@ data/raw/
 data/processed/
 data/weather.db
 
-# trained models — regenerated on VPS via train.py
-models/*.pkl
-models/metadata.json
-
 # python
 .venv/
 __pycache__/

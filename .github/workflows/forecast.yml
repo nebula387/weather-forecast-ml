@@ -1,0 +1,32 @@
+name: Daily Forecast
+
+on:
+  schedule:
+    - cron: '0 4 * * *'  # 07:00 Krasnodar time (UTC+3)
+  workflow_dispatch:      # manual trigger for testing
+
+jobs:
+  forecast:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo (includes trained models)
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run forecast and send to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          CITY: Krasnodar
+          LAT: "45.03"
+          LON: "38.98"
+        run: python src/run_forecast.py
