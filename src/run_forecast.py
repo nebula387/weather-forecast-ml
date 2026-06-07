@@ -16,6 +16,7 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).parent))
 from features import build_features, get_feature_columns
+import models  # noqa: F401 — needed so joblib can deserialize TwoStagePrecipModel
 
 logging.basicConfig(
     level=logging.INFO,

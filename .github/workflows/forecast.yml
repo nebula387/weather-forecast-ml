@@ -2,7 +2,7 @@ name: Daily Forecast
 
 on:
   schedule:
-    - cron: '17 3 * * *'  # 07:00 Krasnodar time (UTC+3)
+    - cron: '23 4 * * *'  # 07:23 Krasnodar time (UTC+3)
   workflow_dispatch:      # manual trigger for testing
 
 jobs:

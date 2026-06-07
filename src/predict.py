@@ -13,6 +13,7 @@ import pandas as pd
 from dotenv import load_dotenv
 
 from features import TARGETS, build_features, get_feature_columns
+import models  # noqa: F401 — needed so joblib can deserialize TwoStagePrecipModel
 
 load_dotenv()
 

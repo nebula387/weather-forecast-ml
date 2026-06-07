@@ -2,53 +2,210 @@
 
 XGBoost models predicting temperature, precipitation, and wind speed 24 hours ahead for Krasnodar, Russia, using the [Open-Meteo API](https://open-meteo.com/) (no API key required).
 
+A Telegram bot sends a daily morning forecast broken down by time of day (Morning / Afternoon / Evening / Night) via GitHub Actions — no VPS or server required.
+
 <img src="media/screen_1.jpg" alt="Telegram daily forecast" width="360"/>
 
-## Quickstart
+---
+
+## How it works
+
+```
+Open-Meteo API
+      │
+      ▼
+GitHub Actions (daily 07:23 Krasnodar time)
+      │
+      ├─ fetch_data()      — past 8 days + 2-day forecast (no DB needed)
+      ├─ build_features()  — 50 engineered features
+      ├─ model.predict()   — 3 XGBoost models (temp / precip / wind)
+      └─ send_telegram()   — HTML message to bot
+```
+
+The scheduled run uses `src/run_forecast.py` — a self-contained script that fetches data, builds features, loads the committed model files, and sends the Telegram message. No SQLite, no server, no .env file needed on the runner.
+
+---
+
+## Models
+
+| Target | Model | Key metric | Notes |
+|--------|-------|-----------|-------|
+| Temperature 24h | XGBRegressor | MAE 1.93°C, R²=0.93 | Production gate: MAE < 2.0°C |
+| Precipitation 24h | Two-stage (XGBClassifier + XGBRegressor) | AUC 0.695 | Handles 87% zero-inflation |
+| Wind speed 24h | XGBRegressor | MAE 4.1 m/s | Difficult 24h horizon |
+
+### Why two-stage for precipitation?
+
+87.3% of hourly readings are 0 mm. A single regressor minimises MSE by predicting near-zero for everything (R²≈0.002). The two-stage pipeline fixes this:
+
+- **Stage 1 — XGBClassifier**: predicts P(rain > 0.5 mm), trained with `scale_pos_weight ≈ 24` to compensate for the imbalance (AUC=0.695)
+- **Stage 2 — XGBRegressor**: predicts amount in mm, trained only on rainy hours
+- **Combined**: `output = amount if P(rain) > 0.30 else 0.0`
+
+---
+
+## Feature engineering (50 features)
+
+| Group | Features |
+|-------|---------|
+| Temp lags | `temp_lag_1h/3h/6h/12h/24h` |
+| Temp rolling | `temp_roll_mean/std × {6h, 24h, 168h}` |
+| Temp delta | `temp_delta_1h/3h/6h` |
+| Wind lags | `windspeed_lag_1h/3h/6h/12h/24h` |
+| Precip lags | `precip_lag_1h/3h/6h/12h/24h` |
+| Precip rolling | `precip_roll_sum_3h/6h/24h` |
+| Pressure lags | `pressure_lag_1h/3h/6h` |
+| **Pressure changes** | **`pressure_change_3h/6h/12h/24h`** (top rain predictor) |
+| Humidity lags | `humidity_lag_1h/3h/6h/12h/24h` |
+| Humidity rolling | `humidity_roll_mean_6h/24h` |
+| Weather code | `weathercode_raw` |
+| Cyclical time | `hour_sin/cos`, `month_sin/cos`, `dayofweek_sin/cos` |
+| Flags | `is_weekend`, `is_daytime` |
+
+Pressure change features were identified in EDA (`notebooks/eda_krasnodar.ipynb`) as the strongest atmospheric precursors to precipitation (r = -0.067 with 6h window).
+
+---
+
+## Project structure
+
+```
+weather-forecast-ml/
+├── .github/
+│   └── workflows/
+│       ├── forecast.yml        Daily 07:23 Krasnodar forecast via GitHub Actions
+│       └── deploy.yml          Auto-deploy to VPS on push (optional)
+├── data/
+│   ├── weather.db              SQLite — 20 years of hourly data (gitignored)
+│   └── eda/                    EDA charts (gitignored)
+├── models/
+│   ├── xgb_temp.pkl            Temperature model (~2 MB)
+│   ├── xgb_precip.pkl          Two-stage precipitation model
+│   ├── xgb_windspeed.pkl       Wind speed model
+│   └── metadata.json           Metrics + production_ready flag
+├── notebooks/
+│   └── eda_krasnodar.ipynb     Exploratory data analysis
+├── src/
+│   ├── download_history.py     Fetch 20 years of data -> SQLite
+│   ├── fetch_live.py           Update SQLite with latest actuals
+│   ├── features.py             Shared feature engineering (50 features)
+│   ├── models.py               TwoStagePrecipModel class
+│   ├── train.py                Train 3 models + production gate
+│   ├── predict.py              24h inference from SQLite
+│   ├── run_forecast.py         Standalone GitHub Actions script (no SQLite)
+│   ├── dashboard.py            Streamlit UI
+│   ├── eda.py                  EDA script (source for notebook)
+│   └── telegram_bot.py         Telegram sender helper
+├── tests/
+│   ├── test_features.py
+│   └── test_predict.py
+├── .env.example
+├── requirements.txt
+└── run_pipeline.sh
+```
+
+---
+
+## Quickstart (local training)
 
 ```bash
 # 1. Install dependencies
 pip install -r requirements.txt
 
-# 2. Copy and configure environment
+# 2. Copy environment config
 cp .env.example .env
-# Edit .env if you want a different city
 
-# 3. Download 20 years of historical data (~5–10 min)
-cd weather-forecast-ml
+# 3. Download 20 years of historical data (~5-10 min first run)
 python src/download_history.py
 
-# 4. Train models (prints metrics + production gate result)
+# 4. Train models (prints metrics + PASS/FAIL gate)
 python src/train.py
-```
 
-## Running predictions
-
-```bash
-# Fetch latest live data from Open-Meteo Forecast API
+# 5. Fetch live data and generate 24h forecast
 python src/fetch_live.py
-
-# Generate 24h forecast table (saved to data/processed/latest_predictions.csv)
 python src/predict.py
-```
 
-## Dashboard
-
-```bash
+# 6. Optional: launch Streamlit dashboard
 streamlit run src/dashboard.py
+
+# 7. Optional: run EDA
+python src/eda.py
 ```
 
-Opens at `http://localhost:8501` with:
-- Last 7 days actual temperature + predicted overlay
-- 24h forecast table (temp, precipitation, wind)
-- Model metrics in sidebar
-- One-click refresh button
+---
 
-## Running tests
+## GitHub Actions — daily Telegram forecast
 
-```bash
-pytest tests/ -v
+The forecast runs automatically every day at **07:23 Krasnodar time** (04:23 UTC) via `.github/workflows/forecast.yml`. No VPS needed.
+
+### Setup (one-time)
+
+**Step 1 — Add GitHub Secrets**
+
+Go to repo **Settings → Secrets and variables → Actions → New repository secret**:
+
+| Secret | Value |
+|--------|-------|
+| `TELEGRAM_BOT_TOKEN` | Token from [@BotFather](https://t.me/BotFather) |
+| `TELEGRAM_CHAT_ID` | Your chat ID (send `/start` to the bot, then check `getUpdates`) |
+
+**Step 2 — Trigger manually to test**
+
+Go to **Actions → Daily Forecast → Run workflow**.
+
+The workflow checks out the repo (which includes the trained model `.pkl` files), fetches 8 days of live data from Open-Meteo, runs inference, and sends the Telegram message.
+
+### Telegram message format
+
 ```
+[icon] Krasnodar — Saturday, June 07
+
+[Morning icon] Morning   06:00-12:00   [condition]
+   Temp: 18°C - 24°C   Precip: 0.0 mm   Wind: 7 m/s
+
+[Afternoon icon] Afternoon   12:00-18:00   [condition]
+   Temp: 26°C - 29°C   Precip: 1.5 mm   Wind: 11 m/s
+
+[Evening icon] Evening   18:00-00:00   [condition]
+   Temp: 21°C - 27°C   Precip: 0.0 mm   Wind: 9 m/s
+
+[Night icon] Night   00:00-06:00   [condition]
+   Temp: 18°C - 21°C   Precip: 0.0 mm   Wind: 8 m/s
+
+---------------------
+Day: 18°C - 29°C  |  1.5 mm  |  up to 11 m/s
+Model accuracy +-1.93°C
+```
+
+---
+
+## Exploratory Data Analysis
+
+See `notebooks/eda_krasnodar.ipynb` for the full analysis. Key findings:
+
+| Signal | Correlation with next-24h rain | Note |
+|--------|-------------------------------|------|
+| `pressure` | -0.080 | Low pressure = wet air mass |
+| `pressure_change_6h` | -0.067 | Falling pressure = rain coming |
+| `pressure_change_12h` | -0.062 | Longer window, similar signal |
+| `precip_rolling_6h` | +0.049 | Current rain often continues |
+| `humidity` | +0.023 | High humidity precedes rain |
+
+---
+
+## Production gate
+
+Training prints a clear result:
+
+```
+=================================================================
+  PRODUCTION GATE: temp MAE = 1.933C  (threshold < 2.0C)
+  -> PASS
+=================================================================
+```
+
+`models/metadata.json` stores `production_ready: true/false` for programmatic checks.
+
+---
 
 ## Changing city
 
@@ -59,185 +216,19 @@ LAT=<latitude>
 LON=<longitude>
 ```
 
-Then re-run `download_history.py` and `train.py`.
-
-## Automated hourly updates (cron)
-
-```cron
-# Every hour: fetch live data and update predictions
-0 * * * * cd /path/to/weather-forecast-ml && bash run_pipeline.sh >> logs/pipeline.log 2>&1
-```
-
-## Phase 2 — Telegram daily forecast
-
-After the production gate passes (temp MAE < 2.0°C), add your bot credentials to `.env`:
-```
-TELEGRAM_BOT_TOKEN=<your token from @BotFather>
-TELEGRAM_CHAT_ID=<your chat or channel ID>
-```
-
-Send today's forecast:
-```bash
-python src/telegram_bot.py
-```
-
-Schedule daily at 07:00:
-```cron
-0 7 * * * cd /path/to/weather-forecast-ml && python src/telegram_bot.py >> logs/telegram.log 2>&1
-```
-
-## Deploy to VPS (GitHub Actions)
-
-### How it works
-
-```
-git push origin main
-       │
-       └─► GitHub Actions
-                │
-                └─► SSH into VPS → git pull → pip install
-```
-
-Code updates deploy automatically on every push. Data and models stay on the VPS (not in git).
+Re-run `download_history.py` and `train.py`. Update the GitHub Actions env vars in `forecast.yml`.
 
 ---
 
-### Step 1 — Create GitHub repository
+## Running tests
 
 ```bash
-# in weather-forecast-ml/ on your local machine
-git init
-git add .
-git commit -m "initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-git push -u origin main
+pytest tests/ -v
 ```
 
 ---
 
-### Step 2 — Generate SSH key for GitHub Actions
+## Optional: VPS auto-deploy
 
-Run on your **local machine** (or anywhere):
-
-```bash
-ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/deploy_key -N ""
-```
-
-This creates two files:
-- `~/.ssh/deploy_key` — **private key** (goes to GitHub Secrets)
-- `~/.ssh/deploy_key.pub` — **public key** (goes to VPS)
-
----
-
-### Step 3 — Add public key to VPS
-
-```bash
-# copy the public key content
-cat ~/.ssh/deploy_key.pub
-
-# on VPS — paste it into authorized_keys
-echo "PASTE_PUBLIC_KEY_HERE" >> ~/.ssh/authorized_keys
-chmod 600 ~/.ssh/authorized_keys
-```
-
----
-
-### Step 4 — Add GitHub Secrets
-
-Go to your repo → **Settings → Secrets and variables → Actions → New repository secret**
-
-| Secret name   | Value                                      |
-|---------------|--------------------------------------------|
-| `VPS_HOST`    | your VPS IP address (e.g. `185.10.20.30`) |
-| `VPS_USER`    | SSH user (e.g. `root` or `ubuntu`)         |
-| `VPS_SSH_KEY` | content of `~/.ssh/deploy_key` (private)   |
-
----
-
-### Step 5 — First-time VPS setup (run once)
-
-SSH into your VPS, then:
-
-```bash
-# clone and set up everything (downloads 20 years of data + trains models)
-curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/scripts/vps_setup.sh | \
-  bash -s -- https://github.com/YOUR_USERNAME/YOUR_REPO.git
-```
-
-Or manually:
-
-```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git /opt/weather-forecast-ml
-cd /opt/weather-forecast-ml
-bash scripts/vps_setup.sh https://github.com/YOUR_USERNAME/YOUR_REPO.git
-```
-
-The script:
-1. Installs Python + git
-2. Creates `.venv` and installs dependencies
-3. Prompts to edit `.env` (add Telegram tokens)
-4. Downloads 20 years of weather data (~10 min)
-5. Trains models (~1 min)
-6. Registers cron jobs (07:00 Telegram + hourly data fetch)
-
----
-
-### Step 6 — Verify auto-deploy
-
-Push any change to `main`:
-
-```bash
-git commit --allow-empty -m "test deploy"
-git push origin main
-```
-
-Go to **GitHub → Actions** tab — you should see the deploy workflow run and succeed.
-
----
-
-### Cron jobs on VPS (set by setup script)
-
-```cron
-# Daily Telegram forecast at 07:00
-0 7 * * * cd /opt/weather-forecast-ml && .venv/bin/python src/telegram_bot.py >> logs/telegram.log 2>&1
-
-# Hourly live data refresh
-0 * * * * cd /opt/weather-forecast-ml && .venv/bin/python src/fetch_live.py >> logs/fetch.log 2>&1
-```
-
-Check or edit manually: `crontab -e`
-
----
-
-## Production gate
-
-Training prints a clear PASS/FAIL line:
-```
-PRODUCTION GATE: temp MAE = 1.87°C  (threshold < 2.0°C)
-→ ✓  PASS
-```
-
-`models/metadata.json` stores `production_ready: true/false` for programmatic checks.
-
-## Project structure
-
-```
-weather-forecast-ml/
-├── data/raw/               Open-Meteo JSON cache (one file per year)
-├── data/processed/         latest_predictions.csv
-├── models/                 xgb_temp.pkl, xgb_precip.pkl, xgb_windspeed.pkl, metadata.json
-├── src/
-│   ├── download_history.py Fetch 20 years → SQLite
-│   ├── fetch_live.py       Fetch latest actuals + forecast window
-│   ├── features.py         Shared feature engineering (lags, rolling, cyclical)
-│   ├── train.py            Train 3 XGBoost models, evaluate, check production gate
-│   ├── predict.py          24h multi-target inference
-│   ├── dashboard.py        Streamlit UI
-│   └── telegram_bot.py     Phase 2: daily Telegram message
-├── tests/
-│   ├── test_features.py
-│   └── test_predict.py
-├── .env.example
-├── requirements.txt
-└── run_pipeline.sh
-```
+See `.github/workflows/deploy.yml` — deploys to a VPS via SSH on every push to `main`.
+Requires `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` secrets.
