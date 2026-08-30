@@ -118,9 +118,9 @@ def mock_models_dir(tmp_path: Path, mock_db: Path) -> Path:
 
     metadata = {
         "trained_at": "2023-06-15T10:00:00",
-        "city": "Krasnodar",
-        "lat": 45.03,
-        "lon": 38.98,
+        "city": "Pattaya",
+        "lat": 12.92,
+        "lon": 100.88,
         "train_rows": len(df),
         "test_rows": 0,
         "feature_columns": feature_cols,
@@ -143,7 +143,7 @@ def test_predict_returns_24_rows(mock_db: Path, mock_models_dir: Path, tmp_path:
     with (
         patch("predict.MODELS_DIR", mock_models_dir),
         patch("predict.OUTPUT_PATH", output_csv),
-        patch.dict("os.environ", {"DB_PATH": str(mock_db), "CITY": "Krasnodar"}),
+        patch.dict("os.environ", {"DB_PATH": str(mock_db), "CITY": "Pattaya"}),
     ):
         import predict
         result = predict.predict()
@@ -157,7 +157,7 @@ def test_predict_output_columns(mock_db: Path, mock_models_dir: Path, tmp_path: 
     with (
         patch("predict.MODELS_DIR", mock_models_dir),
         patch("predict.OUTPUT_PATH", output_csv),
-        patch.dict("os.environ", {"DB_PATH": str(mock_db), "CITY": "Krasnodar"}),
+        patch.dict("os.environ", {"DB_PATH": str(mock_db), "CITY": "Pattaya"}),
     ):
         import predict
         result = predict.predict()
@@ -172,7 +172,7 @@ def test_predict_saves_csv(mock_db: Path, mock_models_dir: Path, tmp_path: Path)
     with (
         patch("predict.MODELS_DIR", mock_models_dir),
         patch("predict.OUTPUT_PATH", output_csv),
-        patch.dict("os.environ", {"DB_PATH": str(mock_db), "CITY": "Krasnodar"}),
+        patch.dict("os.environ", {"DB_PATH": str(mock_db), "CITY": "Pattaya"}),
     ):
         import predict
         predict.predict()
@@ -188,7 +188,7 @@ def test_predict_no_negative_precip(mock_db: Path, mock_models_dir: Path, tmp_pa
     with (
         patch("predict.MODELS_DIR", mock_models_dir),
         patch("predict.OUTPUT_PATH", output_csv),
-        patch.dict("os.environ", {"DB_PATH": str(mock_db), "CITY": "Krasnodar"}),
+        patch.dict("os.environ", {"DB_PATH": str(mock_db), "CITY": "Pattaya"}),
     ):
         import predict
         result = predict.predict()

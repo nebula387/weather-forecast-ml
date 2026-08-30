@@ -2,7 +2,7 @@ name: Daily Forecast
 
 on:
   schedule:
-    - cron: '23 4 * * *'  # 07:23 Krasnodar time (UTC+3)
+    - cron: '23 0 * * *'  # 07:23 Pattaya time (UTC+7)
   workflow_dispatch:      # manual trigger for testing
 
 jobs:
@@ -26,7 +26,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          CITY: Krasnodar
-          LAT: "45.03"
-          LON: "38.98"
+          CITY: Pattaya
+          LAT: "12.92"
+          LON: "100.88"
         run: python src/run_forecast.py

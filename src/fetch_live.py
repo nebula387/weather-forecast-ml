@@ -31,9 +31,9 @@ RETRY_BACKOFF = 5
 
 
 def _get_config() -> tuple[str, float, float, str]:
-    city = os.getenv("CITY", "Krasnodar")
-    lat = float(os.getenv("LAT", "45.03"))
-    lon = float(os.getenv("LON", "38.98"))
+    city = os.getenv("CITY", "Pattaya")
+    lat = float(os.getenv("LAT", "12.92"))
+    lon = float(os.getenv("LON", "100.88"))
     db_path = os.getenv("DB_PATH", "data/weather.db")
     return city, lat, lon, db_path
 
@@ -73,7 +73,7 @@ def _fetch_forecast(lat: float, lon: float) -> dict:
         "past_days": 2,
         "forecast_days": 2,
         "hourly": HOURLY_VARS,
-        "timezone": "Europe/Moscow",
+        "timezone": "Asia/Bangkok",
     }
     for attempt in range(1, RETRY_ATTEMPTS + 1):
         try:

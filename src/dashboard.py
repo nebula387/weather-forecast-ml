@@ -75,8 +75,8 @@ def _production_badge(metadata: dict) -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Krasnodar Weather Forecast", layout="wide")
-    st.title("🌤 Krasnodar — Weather Forecast ML")
+    st.set_page_config(page_title="Pattaya Weather Forecast", layout="wide")
+    st.title("🌤 Pattaya — Weather Forecast ML")
 
     metadata = _load_metadata()
 

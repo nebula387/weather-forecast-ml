@@ -102,7 +102,7 @@ def _load_merged_data(db_path: str) -> tuple[pd.DataFrame, str]:
 def predict() -> pd.DataFrame:
     """Main entry point: run inference and return/save 24-row predictions DataFrame."""
     db_path = os.getenv("DB_PATH", "data/weather.db")
-    city = os.getenv("CITY", "Krasnodar")
+    city = os.getenv("CITY", "Pattaya")
 
     metadata = _load_metadata()
     models = _load_models()

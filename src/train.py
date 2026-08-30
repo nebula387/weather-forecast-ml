@@ -145,9 +145,9 @@ def _print_feature_importances(
 
 def train() -> None:
     """Load data, train 3 models (incl. two-stage precip), evaluate, save artifacts."""
-    city    = os.getenv("CITY",    "Krasnodar")
-    lat     = float(os.getenv("LAT",  "45.03"))
-    lon     = float(os.getenv("LON",  "38.98"))
+    city    = os.getenv("CITY",    "Pattaya")
+    lat     = float(os.getenv("LAT",  "12.92"))
+    lon     = float(os.getenv("LON",  "100.88"))
     db_path = os.getenv("DB_PATH", "data/weather.db")
 
     MODELS_DIR.mkdir(parents=True, exist_ok=True)

@@ -1,5 +1,5 @@
 """
-Exploratory Data Analysis — Krasnodar weather data.
+Exploratory Data Analysis — Pattaya weather data.
 
 Loads weather.db and produces charts that reveal:
   1. Distribution of precipitation, wind, temperature
@@ -98,7 +98,7 @@ def load_data() -> pd.DataFrame:
 
 def plot_distributions(df: pd.DataFrame) -> None:
     fig, axes = plt.subplots(2, 3, figsize=(16, 9))
-    fig.suptitle("Krasnodar — Variable Distributions (2006-2026)", fontsize=14, y=1.01)
+    fig.suptitle("Pattaya — Variable Distributions (2006-2026)", fontsize=14, y=1.01)
 
     # precipitation — log scale
     ax = axes[0, 0]
@@ -321,7 +321,7 @@ def plot_lag_correlations(df: pd.DataFrame) -> None:
 
 def plot_seasonal_patterns(df: pd.DataFrame) -> None:
     fig, axes = plt.subplots(1, 3, figsize=(17, 5))
-    fig.suptitle("Krasnodar — Seasonal Patterns", fontsize=14)
+    fig.suptitle("Pattaya — Seasonal Patterns", fontsize=14)
 
     # hourly precipitation by season
     ax = axes[0]
@@ -424,7 +424,7 @@ def print_summary(df: pd.DataFrame) -> None:
     zero_precip = (df["precipitation"] == 0).sum()
 
     print("\n" + "=" * 60)
-    print("KRASNODAR WEATHER EDA SUMMARY")
+    print("PATTAYA WEATHER EDA SUMMARY")
     print("=" * 60)
     print(f"Total hourly records : {total:>10,}")
     print(f"Date range           : {df.index.min().date()} to {df.index.max().date()}")

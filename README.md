@@ -1,6 +1,6 @@
-# Krasnodar Weather Forecast ML
+# Pattaya Weather Forecast ML
 
-XGBoost models predicting temperature, precipitation, and wind speed 24 hours ahead for Krasnodar, Russia, using the [Open-Meteo API](https://open-meteo.com/) (no API key required).
+XGBoost models predicting temperature, precipitation, and wind speed 24 hours ahead for Pattaya, Thailand, using the [Open-Meteo API](https://open-meteo.com/) (no API key required).
 
 A Telegram bot sends a daily morning forecast broken down by time of day (Morning / Afternoon / Evening / Night) via GitHub Actions — no VPS or server required.
 
@@ -14,7 +14,7 @@ A Telegram bot sends a daily morning forecast broken down by time of day (Mornin
 Open-Meteo API
       │
       ▼
-GitHub Actions (daily 07:23 Krasnodar time)
+GitHub Actions (daily 07:23 Pattaya time)
       │
       ├─ fetch_data()      — past 8 days + 2-day forecast (no DB needed)
       ├─ build_features()  — 50 engineered features
@@ -30,15 +30,15 @@ The scheduled run uses `src/run_forecast.py` — a self-contained script that fe
 
 | Target | Model | Key metric | Notes |
 |--------|-------|-----------|-------|
-| Temperature 24h | XGBRegressor | MAE 1.93°C, R²=0.93 | Production gate: MAE < 2.0°C |
-| Precipitation 24h | Two-stage (XGBClassifier + XGBRegressor) | AUC 0.695 | Handles 87% zero-inflation |
-| Wind speed 24h | XGBRegressor | MAE 4.1 m/s | Difficult 24h horizon |
+| Temperature 24h | XGBRegressor | MAE 0.76°C, R²=0.86 | Production gate: MAE < 2.0°C |
+| Precipitation 24h | Two-stage (XGBClassifier + XGBRegressor) | AUC 0.745 | Handles heavy zero-inflation |
+| Wind speed 24h | XGBRegressor | MAE 3.1 m/s | Difficult 24h horizon |
 
 ### Why two-stage for precipitation?
 
-87.3% of hourly readings are 0 mm. A single regressor minimises MSE by predicting near-zero for everything (R²≈0.002). The two-stage pipeline fixes this:
+Most hourly readings are 0 mm. A single regressor minimises MSE by predicting near-zero for everything. The two-stage pipeline fixes this:
 
-- **Stage 1 — XGBClassifier**: predicts P(rain > 0.5 mm), trained with `scale_pos_weight ≈ 24` to compensate for the imbalance (AUC=0.695)
+- **Stage 1 — XGBClassifier**: predicts P(rain > 0.5 mm), trained with `scale_pos_weight` to compensate for the imbalance (AUC=0.745)
 - **Stage 2 — XGBRegressor**: predicts amount in mm, trained only on rainy hours
 - **Combined**: `output = amount if P(rain) > 0.30 else 0.0`
 
@@ -62,7 +62,7 @@ The scheduled run uses `src/run_forecast.py` — a self-contained script that fe
 | Cyclical time | `hour_sin/cos`, `month_sin/cos`, `dayofweek_sin/cos` |
 | Flags | `is_weekend`, `is_daytime` |
 
-Pressure change features were identified in EDA (`notebooks/eda_krasnodar.ipynb`) as the strongest atmospheric precursors to precipitation (r = -0.067 with 6h window).
+Pressure and recent-rain persistence were identified in EDA (`notebooks/eda_pattaya.ipynb`) as the strongest precursors to precipitation for Pattaya (r = -0.092 for `pressure_change_3h`, r = +0.159 for `precip_rolling_3h`).
 
 ---
 
@@ -72,7 +72,7 @@ Pressure change features were identified in EDA (`notebooks/eda_krasnodar.ipynb`
 weather-forecast-ml/
 ├── .github/
 │   └── workflows/
-│       ├── forecast.yml        Daily 07:23 Krasnodar forecast via GitHub Actions
+│       ├── forecast.yml        Daily 07:23 Pattaya forecast via GitHub Actions
 │       └── deploy.yml          Auto-deploy to VPS on push (optional)
 ├── data/
 │   ├── weather.db              SQLite — 20 years of hourly data (gitignored)
@@ -83,7 +83,7 @@ weather-forecast-ml/
 │   ├── xgb_windspeed.pkl       Wind speed model
 │   └── metadata.json           Metrics + production_ready flag
 ├── notebooks/
-│   └── eda_krasnodar.ipynb     Exploratory data analysis
+│   └── eda_pattaya.ipynb       Exploratory data analysis
 ├── src/
 │   ├── download_history.py     Fetch 20 years of data -> SQLite
 │   ├── fetch_live.py           Update SQLite with latest actuals
@@ -135,7 +135,7 @@ python src/eda.py
 
 ## GitHub Actions — daily Telegram forecast
 
-The forecast runs automatically every day at **07:23 Krasnodar time** (04:23 UTC) via `.github/workflows/forecast.yml`. No VPS needed.
+The forecast runs automatically every day at **07:23 Pattaya time** (00:23 UTC) via `.github/workflows/forecast.yml`. No VPS needed.
 
 ### Setup (one-time)
 
@@ -157,7 +157,7 @@ The workflow checks out the repo (which includes the trained model `.pkl` files)
 ### Telegram message format
 
 ```
-[icon] Krasnodar — Saturday, June 07
+[icon] Pattaya — Saturday, June 07
 
 [Morning icon] Morning   06:00-12:00   [condition]
    Temp: 18°C - 24°C   Precip: 0.0 mm   Wind: 7 m/s
@@ -173,22 +173,24 @@ The workflow checks out the repo (which includes the trained model `.pkl` files)
 
 ---------------------
 Day: 18°C - 29°C  |  1.5 mm  |  up to 11 m/s
-Model accuracy +-1.93°C
+Model accuracy +-0.76°C
 ```
 
 ---
 
 ## Exploratory Data Analysis
 
-See `notebooks/eda_krasnodar.ipynb` for the full analysis. Key findings:
+See `notebooks/eda_pattaya.ipynb` for the full analysis. Key findings (Pattaya, 2006-2026):
 
 | Signal | Correlation with next-24h rain | Note |
 |--------|-------------------------------|------|
-| `pressure` | -0.080 | Low pressure = wet air mass |
-| `pressure_change_6h` | -0.067 | Falling pressure = rain coming |
-| `pressure_change_12h` | -0.062 | Longer window, similar signal |
-| `precip_rolling_6h` | +0.049 | Current rain often continues |
-| `humidity` | +0.023 | High humidity precedes rain |
+| `precip_rolling_3h` | +0.159 | Current rain is the strongest predictor of more rain |
+| `precip_rolling_6h` | +0.150 | Persistence signal, slightly weaker at 6h |
+| `pressure` | -0.118 | Low pressure = wet air mass |
+| `pressure_change_3h` | -0.092 | Falling pressure = rain coming |
+| `humidity` | +0.052 | High humidity precedes rain |
+
+Unlike Krasnodar's mid-latitude, frontal-system-driven rain (where multi-hour pressure trends dominate), Pattaya's tropical rain is more persistence-driven — recent rainfall predicts near-term rainfall more strongly than pressure trends do.
 
 ---
 
@@ -198,7 +200,7 @@ Training prints a clear result:
 
 ```
 =================================================================
-  PRODUCTION GATE: temp MAE = 1.933C  (threshold < 2.0C)
+  PRODUCTION GATE: temp MAE = 0.760C  (threshold < 2.0C)
   -> PASS
 =================================================================
 ```

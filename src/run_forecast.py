@@ -50,7 +50,7 @@ def fetch_data(lat: float, lon: float, past_days: int = 8) -> pd.DataFrame:
             "temperature_2m,relativehumidity_2m,pressure_msl,"
             "windspeed_10m,precipitation,weathercode"
         ),
-        "timezone": "Europe/Moscow",
+        "timezone": "Asia/Bangkok",
     }
     for attempt in range(1, 4):
         try:
@@ -82,7 +82,7 @@ def run_prediction(raw_df: pd.DataFrame) -> tuple[pd.DataFrame, float]:
     feature_cols = get_feature_columns(df)
 
     df["time"] = pd.to_datetime(df["time"])
-    now = pd.Timestamp.now(tz="Europe/Moscow").tz_localize(None)
+    now = pd.Timestamp.now(tz="Asia/Bangkok").tz_localize(None)
     forecast_rows = df[df["time"] > now].head(24)
 
     if forecast_rows.empty:
@@ -129,7 +129,7 @@ def _period_icon(precip: float, temp_max: float) -> str:
 
 def build_message(df: pd.DataFrame, mae_temp: float) -> str:
     """Build structured Telegram HTML message broken down by time of day."""
-    city = os.getenv("CITY", "Krasnodar")
+    city = os.getenv("CITY", "Pattaya")
     today = date.today().strftime("%A, %B %d")
 
     df = df.copy()
@@ -202,9 +202,9 @@ def send_telegram(message: str) -> None:
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    city = os.getenv("CITY", "Krasnodar")
-    lat  = float(os.getenv("LAT", "45.03"))
-    lon  = float(os.getenv("LON", "38.98"))
+    city = os.getenv("CITY", "Pattaya")
+    lat  = float(os.getenv("LAT", "12.92"))
+    lon  = float(os.getenv("LON", "100.88"))
 
     log.info("=== Scheduled forecast: %s ===", city)
 

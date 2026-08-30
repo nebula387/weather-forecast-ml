@@ -1,10 +1,10 @@
 {
-  "trained_at": "2026-06-07T10:10:33.863079",
-  "city": "Krasnodar",
-  "lat": 45.03,
-  "lon": 38.98,
-  "train_rows": 169928,
-  "test_rows": 8660,
+  "trained_at": "2026-08-30T15:43:37.591211",
+  "city": "Pattaya",
+  "lat": 12.92,
+  "lon": 100.88,
+  "train_rows": 172152,
+  "test_rows": 8760,
   "feature_count": 50,
   "feature_columns": [
     "temp_lag_1h",
@@ -58,13 +58,13 @@
     "temp_delta_3h",
     "temp_delta_6h"
   ],
-  "mae_temp": 1.9326,
-  "mae_precip": 0.5133,
-  "mae_wind": 4.0893,
-  "rmse_temp": 2.6288,
-  "r2_temp": 0.9278,
-  "r2_precip": -3.1047,
-  "auc_precip": 0.6947,
+  "mae_temp": 0.7603,
+  "mae_precip": 0.6918,
+  "mae_wind": 3.111,
+  "rmse_temp": 1.007,
+  "r2_temp": 0.8621,
+  "r2_precip": -1.3563,
+  "auc_precip": 0.7452,
   "production_ready": true,
   "precip_model": "TwoStage(clf+reg)"
 }

@@ -87,7 +87,7 @@ def _period_icon(precip: float, temp_max: float) -> str:
 
 def _build_message(df: pd.DataFrame, mae_temp: float) -> str:
     """Build a structured daily forecast message broken down by time of day."""
-    city = os.getenv("CITY", "Krasnodar")
+    city = os.getenv("CITY", "Pattaya")
     today = date.today().strftime("%A, %B %d")
 
     df = df.copy()
