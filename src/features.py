@@ -16,7 +16,8 @@ def build_features(df: pd.DataFrame, inference: bool = False) -> pd.DataFrame:
 
     Args:
         df: DataFrame with columns matching the weather SQLite schema:
-            time, temp, humidity, pressure, windspeed, precipitation, weathercode
+            time, temp, humidity, pressure, windspeed, precipitation, weathercode,
+            cloudcover, dew_point, shortwave_radiation, vapour_pressure_deficit
         inference: When True, skip target columns and only drop NaN in features.
             Use this for predict.py; leave False for train.py.
 
@@ -58,6 +59,23 @@ def build_features(df: pd.DataFrame, inference: bool = False) -> pd.DataFrame:
     # --- weather code (categorical, direct) ---
     df["weathercode_raw"] = df["weathercode"].fillna(0).astype(float)
 
+    # --- convective / moisture signals (added 2026-09-05 to fix precip over-firing) ---
+    # Direct current-hour readings: contemporaneous, not future info (same pattern as
+    # weathercode_raw / temp_delta_*, which also read the current row's raw columns).
+    df["cloudcover_raw"] = df["cloudcover"]
+    df["radiation_raw"]  = df["shortwave_radiation"]
+    df["vpd_raw"]        = df["vapour_pressure_deficit"]
+    # Dew point spread: how far air is from saturation. Small/falling spread is a
+    # classic precursor to convective rain; large spread means dry air, unlikely rain.
+    df["dewpoint_spread"] = df["temp"] - df["dew_point"]
+
+    for h in [1, 3, 6, 24]:
+        df[f"cloudcover_lag_{h}h"] = df["cloudcover"].shift(h)
+    df["cloudcover_roll_mean_6h"] = df["cloudcover"].shift(1).rolling(6).mean()
+
+    for h in [1, 3, 6]:
+        df[f"vpd_lag_{h}h"] = df["vapour_pressure_deficit"].shift(h)
+
     # --- cyclical time encoding ---
     df["hour_sin"]       = np.sin(2 * np.pi * df["time"].dt.hour      / 24)
     df["hour_cos"]       = np.cos(2 * np.pi * df["time"].dt.hour      / 24)
@@ -92,6 +110,7 @@ def _feature_columns(df: pd.DataFrame) -> list[str]:
     exclude = {
         "time", "temp", "humidity", "pressure", "windspeed",
         "precipitation", "weathercode",
+        "cloudcover", "dew_point", "shortwave_radiation", "vapour_pressure_deficit",
     } | set(TARGETS)
     return [c for c in df.columns if c not in exclude]
 

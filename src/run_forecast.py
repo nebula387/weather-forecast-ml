@@ -48,7 +48,8 @@ def fetch_data(lat: float, lon: float, past_days: int = 8) -> pd.DataFrame:
         "forecast_days": 2,
         "hourly": (
             "temperature_2m,relativehumidity_2m,pressure_msl,"
-            "windspeed_10m,precipitation,weathercode"
+            "windspeed_10m,precipitation,weathercode,"
+            "cloudcover,dew_point_2m,shortwave_radiation,vapour_pressure_deficit"
         ),
         "timezone": "Asia/Bangkok",
     }
@@ -58,13 +59,17 @@ def fetch_data(lat: float, lon: float, past_days: int = 8) -> pd.DataFrame:
             resp.raise_for_status()
             h = resp.json()["hourly"]
             return pd.DataFrame({
-                "time":          h["time"],
-                "temp":          h["temperature_2m"],
-                "humidity":      h["relativehumidity_2m"],
-                "pressure":      h["pressure_msl"],
-                "windspeed":     h["windspeed_10m"],
-                "precipitation": h["precipitation"],
-                "weathercode":   h["weathercode"],
+                "time":                    h["time"],
+                "temp":                    h["temperature_2m"],
+                "humidity":                h["relativehumidity_2m"],
+                "pressure":                h["pressure_msl"],
+                "windspeed":               h["windspeed_10m"],
+                "precipitation":           h["precipitation"],
+                "weathercode":             h["weathercode"],
+                "cloudcover":              h["cloudcover"],
+                "dew_point":               h["dew_point_2m"],
+                "shortwave_radiation":     h["shortwave_radiation"],
+                "vapour_pressure_deficit": h["vapour_pressure_deficit"],
             })
         except requests.RequestException as exc:
             log.warning("API attempt %d/3 failed: %s", attempt, exc)

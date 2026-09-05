@@ -17,7 +17,7 @@ class TwoStagePrecipModel:
     Predict: amount if P(rain) > clf_threshold else 0
     """
 
-    def __init__(self, clf_threshold: float = 0.30):
+    def __init__(self, clf_threshold: float = 0.50):
         self.clf_threshold = clf_threshold
         self.clf: XGBClassifier | None = None
         self.reg: XGBRegressor | None  = None

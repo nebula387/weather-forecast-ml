@@ -26,7 +26,8 @@ log = logging.getLogger(__name__)
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 HOURLY_VARS = (
     "temperature_2m,relativehumidity_2m,pressure_msl,"
-    "windspeed_10m,precipitation,weathercode"
+    "windspeed_10m,precipitation,weathercode,"
+    "cloudcover,dew_point_2m,shortwave_radiation,vapour_pressure_deficit"
 )
 RAW_DIR = Path("data/raw")
 RETRY_ATTEMPTS = 3
@@ -47,13 +48,17 @@ def _init_db(db_path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS weather (
-            time          TEXT PRIMARY KEY,
-            temp          REAL,
-            humidity      REAL,
-            pressure      REAL,
-            windspeed     REAL,
-            precipitation REAL,
-            weathercode   INTEGER
+            time                    TEXT PRIMARY KEY,
+            temp                    REAL,
+            humidity                REAL,
+            pressure                REAL,
+            windspeed               REAL,
+            precipitation           REAL,
+            weathercode             INTEGER,
+            cloudcover              REAL,
+            dew_point               REAL,
+            shortwave_radiation     REAL,
+            vapour_pressure_deficit REAL
         )
     """)
     conn.commit()
@@ -98,12 +103,17 @@ def _upsert_rows(conn: sqlite3.Connection, data: dict) -> int:
         h["windspeed_10m"],
         h["precipitation"],
         h["weathercode"],
+        h["cloudcover"],
+        h["dew_point_2m"],
+        h["shortwave_radiation"],
+        h["vapour_pressure_deficit"],
     ))
     conn.executemany(
         """
         INSERT OR REPLACE INTO weather
-            (time, temp, humidity, pressure, windspeed, precipitation, weathercode)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+            (time, temp, humidity, pressure, windspeed, precipitation, weathercode,
+             cloudcover, dew_point, shortwave_radiation, vapour_pressure_deficit)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         rows,
     )

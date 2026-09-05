@@ -1,10 +1,17 @@
 """Train one XGBoost model per target, evaluate, and save with metadata.
 
 Precipitation uses a two-stage approach to handle the extreme class imbalance
-(87% of hours have zero precipitation):
+(93% of hours have zero precipitation):
   Stage 1 — XGBClassifier: predicts P(rain > 0.5 mm in next 24h)
   Stage 2 — XGBRegressor : predicts amount, trained only on rainy hours
-  Combined: output = amount if P(rain) > 0.30 else 0
+  Combined: output = amount if P(rain) > 0.50 else 0
+
+clf_threshold=0.50 (raised from an initial 0.30 on 2026-09-05): at 0.30 the
+classifier fired "rain" on 40.7% of test-set hours vs an actual base rate of
+6.8%, i.e. only ~1 in 8 "rain" calls was real (precision 0.127). Precision
+plateaus around 0.15 for any threshold >= 0.40, so 0.50 was chosen as the best
+recall obtainable at that plateau (~0.47) rather than sacrificing more recall
+for zero further precision gain at higher thresholds.
 """
 
 from __future__ import annotations
@@ -175,7 +182,7 @@ def train() -> None:
 
     # --- precipitation (two-stage) ---
     log.info("Training two-stage precipitation model ...")
-    precip_model = TwoStagePrecipModel(clf_threshold=0.30)
+    precip_model = TwoStagePrecipModel(clf_threshold=0.50)
     precip_model.fit(X_train, train_df["precip_24h"], X_test, test_df["precip_24h"])
     m_precip = _eval_precip(precip_model, X_test, test_df["precip_24h"])
     all_metrics["precip_24h"] = m_precip

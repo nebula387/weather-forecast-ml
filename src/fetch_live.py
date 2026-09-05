@@ -24,7 +24,8 @@ log = logging.getLogger(__name__)
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 HOURLY_VARS = (
     "temperature_2m,relativehumidity_2m,pressure_msl,"
-    "windspeed_10m,precipitation,weathercode"
+    "windspeed_10m,precipitation,weathercode,"
+    "cloudcover,dew_point_2m,shortwave_radiation,vapour_pressure_deficit"
 )
 RETRY_ATTEMPTS = 3
 RETRY_BACKOFF = 5
@@ -42,24 +43,32 @@ def _init_tables(conn: sqlite3.Connection) -> None:
     """Create weather and forecast_raw tables if they don't exist."""
     conn.execute("""
         CREATE TABLE IF NOT EXISTS weather (
-            time          TEXT PRIMARY KEY,
-            temp          REAL,
-            humidity      REAL,
-            pressure      REAL,
-            windspeed     REAL,
-            precipitation REAL,
-            weathercode   INTEGER
+            time                    TEXT PRIMARY KEY,
+            temp                    REAL,
+            humidity                REAL,
+            pressure                REAL,
+            windspeed               REAL,
+            precipitation           REAL,
+            weathercode             INTEGER,
+            cloudcover              REAL,
+            dew_point               REAL,
+            shortwave_radiation     REAL,
+            vapour_pressure_deficit REAL
         )
     """)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS forecast_raw (
-            time          TEXT PRIMARY KEY,
-            temp          REAL,
-            humidity      REAL,
-            pressure      REAL,
-            windspeed     REAL,
-            precipitation REAL,
-            weathercode   INTEGER
+            time                    TEXT PRIMARY KEY,
+            temp                    REAL,
+            humidity                REAL,
+            pressure                REAL,
+            windspeed               REAL,
+            precipitation           REAL,
+            weathercode             INTEGER,
+            cloudcover              REAL,
+            dew_point               REAL,
+            shortwave_radiation     REAL,
+            vapour_pressure_deficit REAL
         )
     """)
     conn.commit()
@@ -109,6 +118,10 @@ def _split_and_store(conn: sqlite3.Connection, data: dict) -> tuple[int, int]:
             h["windspeed_10m"][i],
             h["precipitation"][i],
             h["weathercode"][i],
+            h["cloudcover"][i],
+            h["dew_point_2m"][i],
+            h["shortwave_radiation"][i],
+            h["vapour_pressure_deficit"][i],
         )
         if ts <= now_iso:
             actuals.append(row)
@@ -117,8 +130,9 @@ def _split_and_store(conn: sqlite3.Connection, data: dict) -> tuple[int, int]:
 
     upsert_sql = """
         INSERT OR REPLACE INTO {table}
-            (time, temp, humidity, pressure, windspeed, precipitation, weathercode)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+            (time, temp, humidity, pressure, windspeed, precipitation, weathercode,
+             cloudcover, dew_point, shortwave_radiation, vapour_pressure_deficit)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     conn.executemany(upsert_sql.format(table="weather"), actuals)
     conn.executemany(upsert_sql.format(table="forecast_raw"), forecasts)

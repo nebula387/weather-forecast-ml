@@ -28,6 +28,10 @@ def _make_weather_rows(n: int, start: str = "2023-06-01") -> list[tuple]:
             float(rng.uniform(1, 15)),
             float(rng.uniform(0, 5)),
             int(rng.integers(0, 3)),
+            float(rng.uniform(0, 100)),
+            float(rng.uniform(10, 28)),
+            float(rng.uniform(0, 900)),
+            float(rng.uniform(0, 3)),
         )
         for t in times
     ]
@@ -45,6 +49,10 @@ def _make_forecast_rows(n: int, start: str) -> list[tuple]:
             float(rng.uniform(1, 15)),
             float(rng.uniform(0, 5)),
             int(rng.integers(0, 3)),
+            float(rng.uniform(0, 100)),
+            float(rng.uniform(10, 28)),
+            float(rng.uniform(0, 900)),
+            float(rng.uniform(0, 3)),
         )
         for t in times
     ]
@@ -53,16 +61,20 @@ def _make_forecast_rows(n: int, start: str) -> list[tuple]:
 CREATE_WEATHER = """
     CREATE TABLE weather (
         time TEXT PRIMARY KEY, temp REAL, humidity REAL,
-        pressure REAL, windspeed REAL, precipitation REAL, weathercode INTEGER
+        pressure REAL, windspeed REAL, precipitation REAL, weathercode INTEGER,
+        cloudcover REAL, dew_point REAL, shortwave_radiation REAL,
+        vapour_pressure_deficit REAL
     )
 """
 CREATE_FORECAST = """
     CREATE TABLE forecast_raw (
         time TEXT PRIMARY KEY, temp REAL, humidity REAL,
-        pressure REAL, windspeed REAL, precipitation REAL, weathercode INTEGER
+        pressure REAL, windspeed REAL, precipitation REAL, weathercode INTEGER,
+        cloudcover REAL, dew_point REAL, shortwave_radiation REAL,
+        vapour_pressure_deficit REAL
     )
 """
-INSERT_SQL = "INSERT INTO {t} VALUES (?,?,?,?,?,?,?)"
+INSERT_SQL = "INSERT INTO {t} VALUES (?,?,?,?,?,?,?,?,?,?,?)"
 
 
 @pytest.fixture()

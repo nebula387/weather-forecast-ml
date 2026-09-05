@@ -24,6 +24,9 @@ EXPECTED_FEATURE_GROUPS = [
     "dayofweek_sin", "dayofweek_cos",
     "is_weekend", "is_daytime",
     "temp_delta_1h", "temp_delta_3h", "temp_delta_6h",
+    "cloudcover_raw", "radiation_raw", "vpd_raw", "dewpoint_spread",
+    "cloudcover_lag_1h", "cloudcover_lag_24h", "cloudcover_roll_mean_6h",
+    "vpd_lag_1h", "vpd_lag_6h",
 ]
 
 
@@ -39,6 +42,10 @@ def _make_df(n: int = 300) -> pd.DataFrame:
         "windspeed": rng.uniform(0, 20, n),
         "precipitation": rng.uniform(0, 10, n),
         "weathercode": rng.integers(0, 100, n),
+        "cloudcover": rng.uniform(0, 100, n),
+        "dew_point": rng.uniform(-10, 30, n),
+        "shortwave_radiation": rng.uniform(0, 900, n),
+        "vapour_pressure_deficit": rng.uniform(0, 3, n),
     })
 
 
