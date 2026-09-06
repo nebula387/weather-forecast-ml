@@ -4,7 +4,7 @@ XGBoost models predicting temperature, precipitation, and wind speed 24 hours ah
 
 A Telegram bot sends a daily morning forecast broken down by time of day (Morning / Afternoon / Evening / Night) via GitHub Actions — no VPS or server required.
 
-<img src="media/screen_1.jpg" alt="Telegram daily forecast" width="360"/>
+<img src="media/pattaya.jpg" alt="Telegram daily forecast" width="360"/>
 
 ---
 
